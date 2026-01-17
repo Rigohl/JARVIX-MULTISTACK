@@ -1,0 +1,15 @@
+# Keywords que indican paywall/desafío (detector pasivo)
+subscribe
+subscribe now
+premium content
+paywall
+upgrade to premium
+sign up
+log in required
+account required
+access denied
+unauthorized
+please sign in
+members only
+paid subscription
+exclusive content

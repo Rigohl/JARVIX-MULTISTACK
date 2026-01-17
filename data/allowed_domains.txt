@@ -1,0 +1,7 @@
+# Allowlist de dominios permitidos para recolección
+example.com
+httpbin.org
+w3schools.com
+wikipedia.org
+github.com
+rust-lang.org

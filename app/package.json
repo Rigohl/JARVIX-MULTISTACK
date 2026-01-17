@@ -1,0 +1,20 @@
+{
+  "name": "jarvix-app",
+  "version": "1.0.0",
+  "description": "JARVIX MVP - Report Generator",
+  "main": "index.js",
+  "scripts": {
+    "report": "ts-node report.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["jarvix", "osint", "scoring"],
+  "author": "JARVIX Team",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^25.0.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
+
