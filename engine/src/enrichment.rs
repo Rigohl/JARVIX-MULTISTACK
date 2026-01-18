@@ -241,12 +241,19 @@ struct GoogleTrendsProvider {
     config: GoogleTrendsConfig,
 }
 
+impl GoogleTrendsProvider {
+    /// Extract domain from URL
+    fn extract_domain(&self, url: &str) -> Result<String> {
+        let parsed = Url::parse(url).context("Invalid URL")?;
+        Ok(parsed.host_str().unwrap_or("").to_string())
+    }
+}
+
 #[async_trait]
 impl EnrichmentProvider for GoogleTrendsProvider {
     async fn enrich(&self, url: &str, _client: &Client) -> Result<Option<ScoreAdjustment>> {
         // Extract domain keywords for trend checking
-        let parsed = Url::parse(url).context("Invalid URL")?;
-        let domain = parsed.host_str().unwrap_or("");
+        let domain = self.extract_domain(url)?;
         
         // Extract potential keywords from domain (simplified approach)
         let keywords: Vec<&str> = domain.split('.').filter(|s| s.len() > 3).collect();
@@ -283,41 +290,42 @@ struct ShopifyDetectionProvider {
     config: ShopifyConfig,
 }
 
+impl ShopifyDetectionProvider {
+    /// Fetch HTML content with timeout
+    async fn fetch_html(&self, url: &str, client: &Client) -> Option<String> {
+        let timeout = std::time::Duration::from_secs(self.config.timeout_seconds);
+        tokio::time::timeout(timeout, client.get(url).send())
+            .await
+            .ok()?
+            .ok()?
+            .text()
+            .await
+            .ok()
+    }
+}
+
 #[async_trait]
 impl EnrichmentProvider for ShopifyDetectionProvider {
     async fn enrich(&self, url: &str, client: &Client) -> Result<Option<ScoreAdjustment>> {
         // Fetch HTML and check for Shopify signatures
-        let timeout = std::time::Duration::from_secs(self.config.timeout_seconds);
-        let response = tokio::time::timeout(
-            timeout,
-            client.get(url).send()
-        ).await;
+        if let Some(html) = self.fetch_html(url, client).await {
+            // Check for Shopify signatures in HTML
+            let shopify_patterns = [
+                "cdn.shopify.com",
+                "Shopify.theme",
+                "shopify-analytics",
+                "shopify_pay",
+                "myshopify.com",
+            ];
 
-        match response {
-            Ok(Ok(resp)) => {
-                if let Ok(html) = resp.text().await {
-                    // Check for Shopify signatures in HTML
-                    let shopify_patterns = [
-                        "cdn.shopify.com",
-                        "Shopify.theme",
-                        "shopify-analytics",
-                        "shopify_pay",
-                        "myshopify.com",
-                    ];
+            let is_shopify = shopify_patterns.iter().any(|pattern| html.contains(pattern));
 
-                    let is_shopify = shopify_patterns.iter().any(|pattern| html.contains(pattern));
-
-                    if is_shopify {
-                        return Ok(Some(ScoreAdjustment {
-                            source: "Shopify Detection".to_string(),
-                            adjustment: 15.0,
-                            reason: "Detected as Shopify store".to_string(),
-                        }));
-                    }
-                }
-            },
-            _ => {
-                // Timeout or error - graceful fallback
+            if is_shopify {
+                return Ok(Some(ScoreAdjustment {
+                    source: "Shopify Detection".to_string(),
+                    adjustment: 15.0,
+                    reason: "Detected as Shopify store".to_string(),
+                }));
             }
         }
 
@@ -335,15 +343,22 @@ struct WhoisProvider {
     config: WhoisConfig,
 }
 
+impl WhoisProvider {
+    /// Extract domain from URL
+    fn extract_domain(&self, url: &str) -> Result<String> {
+        let parsed = Url::parse(url).context("Invalid URL")?;
+        Ok(parsed.host_str().unwrap_or("").to_string())
+    }
+}
+
 #[async_trait]
 impl EnrichmentProvider for WhoisProvider {
     async fn enrich(&self, url: &str, _client: &Client) -> Result<Option<ScoreAdjustment>> {
-        let parsed = Url::parse(url).context("Invalid URL")?;
-        let domain = parsed.host_str().unwrap_or("");
+        let domain = self.extract_domain(url)?;
 
         // Use tokio::process to call whois command
         let output = tokio::process::Command::new("whois")
-            .arg(domain)
+            .arg(&domain)
             .output()
             .await;
 
@@ -392,7 +407,10 @@ impl WhoisProvider {
             if let Ok(re) = Regex::new(pattern) {
                 if let Some(cap) = re.captures(whois_data) {
                     if let Some(date_str) = cap.get(1) {
-                        if let Ok(date) = DateTime::parse_from_rfc3339(&format!("{}T00:00:00Z", date_str.as_str())) {
+                        // Pre-format the string once instead of allocating in hot path
+                        let date_string = date_str.as_str();
+                        let rfc3339 = format!("{}T00:00:00Z", date_string);
+                        if let Ok(date) = DateTime::parse_from_rfc3339(&rfc3339) {
                             return Some(date.with_timezone(&Utc));
                         }
                     }
@@ -578,11 +596,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_manager() {
+        use std::env;
         use std::fs;
-        let db_path = "/tmp/test_cache.db";
-        let _ = fs::remove_file(db_path); // Clean up if exists
         
-        let cache = CacheManager::new(db_path.to_string(), 168);
+        // Use cross-platform temp directory
+        let temp_dir = env::temp_dir();
+        let db_path = temp_dir.join("test_cache.db");
+        let db_path_str = db_path.to_str().unwrap();
+        
+        let _ = fs::remove_file(&db_path); // Clean up if exists
+        
+        let cache = CacheManager::new(db_path_str.to_string(), 168);
         cache.init_db().unwrap();
 
         let enriched = EnrichedScore {
@@ -602,7 +626,7 @@ mod tests {
         assert_eq!(retrieved.unwrap().enriched_score, 65.0);
         
         // Clean up
-        let _ = fs::remove_file(db_path);
+        let _ = fs::remove_file(&db_path);
     }
 
     #[tokio::test]

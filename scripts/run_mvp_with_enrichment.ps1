@@ -74,7 +74,10 @@ $demoUrls = @(
 Write-Host "Enriching sample URLs..." -ForegroundColor Cyan
 foreach ($item in $demoUrls) {
     Write-Host "  Processing: $($item.url)" -ForegroundColor Gray
-    & .\engine\target\release\jarvix-enrichment.exe enrich --url $item.url --score $item.score --format json > "$env:TEMP\enrichment_$($item.url -replace '[^a-zA-Z0-9]', '_').json"
+    $sanitizedUrl = $item.url -replace '[^a-zA-Z0-9]', '_'
+    $outputFile = "$env:TEMP\enrichment_$sanitizedUrl.json"
+    & .\engine\target\release\jarvix-enrichment.exe enrich `
+        --url $item.url --score $item.score --format json > $outputFile
 }
 
 Write-Host "✓ Enrichment complete" -ForegroundColor Green

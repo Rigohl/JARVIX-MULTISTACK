@@ -79,7 +79,9 @@ async fn main() -> Result<()> {
             config,
             format,
         } => {
-            let enriched = enrich_score(&url, score, config.to_str().unwrap()).await?;
+            let config_path = config.to_str()
+                .ok_or_else(|| anyhow::anyhow!("Invalid config path"))?;
+            let enriched = enrich_score(&url, score, config_path).await?;
 
             match format.as_str() {
                 "json" => {
@@ -177,8 +179,8 @@ async fn main() -> Result<()> {
             // Write output
             let output_lines: Vec<String> = enriched_records
                 .iter()
-                .map(|r| serde_json::to_string(r).unwrap())
-                .collect();
+                .map(|r| serde_json::to_string(r))
+                .collect::<Result<Vec<String>, _>>()?;
 
             fs::write(&output, output_lines.join("\n"))?;
 
