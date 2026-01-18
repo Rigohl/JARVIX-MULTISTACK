@@ -112,10 +112,36 @@ Output: data/scores/`<run_id>`.jsonl (all), data/top/`<run_id>`.json (top 10)
 **Blocked HTTP Codes**: 401/403 blocks domain, 429 raises error
 **Paywall Detection**: Keyword matching (paywall_keywords.txt)
 
+## 📈 Phase 3: Temporal Trend Detection (NEW!)
+
+**Week-over-Week Analysis & Forecasting**
+
+```bash
+# Run trend analysis
+julia science/trends.jl demo_001 data
+
+# Generate HTML report with sparklines
+npx ts-node app/trend_report.ts demo_001 data
+
+# Setup weekly automation
+bash scripts/setup_cron.sh
+```
+
+**Features**:
+- ✅ WoW score comparisons (7-day delta)
+- ✅ Trend classification: IMPROVED (+10%), DECLINED (-10%), STABLE, NEW
+- ✅ 30-day forecasting with confidence metrics
+- ✅ Email alerts for >20% improvements
+- ✅ CSV/JSON/HTML exports with sparklines
+- ✅ Performance: 1000 URLs in <2 minutes
+
+See **PHASE3_TRENDS.md** for complete documentation.
+
 ## 📚 Documentation
 
 For detailed information, see:
 - **README.md** - This file (MVP overview)
+- **PHASE3_TRENDS.md** - 📊 Temporal Trend Detection documentation
 - **V2_ROADMAP.md** - 🚀 Evolution to "Intelligence Factory" (acciones, auto-discovery, APIs, trends)
 - **D:\PROYECTOS.md** - All projects including JARVIX details
 - **D:\REGLAS_IMPLEMENTADAS.md** - Implementation patterns
@@ -130,10 +156,14 @@ For detailed information, see:
 | engine/src/collector.rs | 232 | ✅ |
 | engine/src/policy.rs | 175 | ✅ |
 | science/score.jl | 130 | ✅ |
+| science/trends.jl | 330 | ✅ Phase 3 |
+| science/weekly_trends.jl | 130 | ✅ Phase 3 |
+| science/email_alerts.jl | 180 | ✅ Phase 3 |
 | app/report.ts | 290 | ✅ |
+| app/trend_report.ts | 480 | ✅ Phase 3 |
 | scripts/run_mvp.ps1 | 190 | ✅ |
 
-**Total**: ~1,400 lines production code
+**Total**: ~2,600 lines production code (includes Phase 3)
 
 ## 🔄 Full Automation
 
