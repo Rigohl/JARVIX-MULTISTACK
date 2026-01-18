@@ -5,9 +5,14 @@
   "main": "index.js",
   "scripts": {
     "report": "ts-node report.ts",
+    "pdf": "ts-node pdf.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["jarvix", "osint", "scoring"],
+  "keywords": [
+    "jarvix",
+    "osint",
+    "scoring"
+  ],
   "author": "JARVIX Team",
   "license": "MIT",
   "type": "commonjs",
@@ -15,6 +20,11 @@
     "@types/node": "^25.0.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/pdfkit": "^0.17.4",
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
+    "pdfkit": "^0.17.2"
   }
 }
-

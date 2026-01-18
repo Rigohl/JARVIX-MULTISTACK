@@ -52,6 +52,10 @@ data/experiments/
 data/logs/
 data/cache/
 
+# ============= GENERATED REPORTS =============
+data/reports/*.pdf
+data/top/perf_test_*.json
+
 # ============= OS =============
 .DS_Store
 .AppleDouble
