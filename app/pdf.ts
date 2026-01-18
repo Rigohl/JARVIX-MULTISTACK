@@ -41,15 +41,15 @@ function getRecommendedAction(score: number, hasKeywords: boolean): ActionRecomm
     return {
       action: 'BUY',
       color: '#4CAF50',
-      confidence: 0.95,
-      reason: 'High quality score with strong signals',
+      confidence: hasKeywords ? 0.95 : 0.85,
+      reason: hasKeywords ? 'High quality score with buy intent' : 'High quality score',
     };
   } else if (score > 50) {
     return {
       action: 'MONITOR',
       color: '#FF9800',
-      confidence: 0.70,
-      reason: 'Medium potential, requires evaluation',
+      confidence: hasKeywords ? 0.75 : 0.70,
+      reason: hasKeywords ? 'Medium potential with buy signals' : 'Medium potential, requires evaluation',
     };
   } else {
     return {
@@ -244,7 +244,9 @@ export async function generatePDF(
     .font('Helvetica')
     .text(topData.count.toString(), 200, boxY + 80);
 
-  const avgScore = topData.items.reduce((a, b) => a + b.final_score, 0) / topData.items.length;
+  const avgScore = topData.items.length > 0 
+    ? topData.items.reduce((a, b) => a + b.final_score, 0) / topData.items.length 
+    : 0;
   doc
     .font('Helvetica-Bold')
     .text('Avg Score:', 120, boxY + 110);
@@ -341,7 +343,11 @@ export async function generatePDF(
     .fillColor('#333')
     .text(`• ${withKeywords} opportunities have buy intent signals`, 60);
   doc.text(`• ${cleanRecords} records passed all quality checks`, 60);
-  doc.text(`• Average quality score: ${(topData.items.reduce((a, b) => a + b.quality_score, 0) / topData.items.length).toFixed(1)}/100`, 60);
+  
+  const avgQualityScore = topData.items.length > 0 
+    ? topData.items.reduce((a, b) => a + b.quality_score, 0) / topData.items.length 
+    : 0;
+  doc.text(`• Average quality score: ${avgQualityScore.toFixed(1)}/100`, 60);
 
   // ============ TOP-10 TABLE ============
   doc.addPage();
