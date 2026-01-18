@@ -50,11 +50,29 @@ CREATE TABLE IF NOT EXISTS versions (
     installed_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de historial de oportunidades (Fase 3: Temporal Trend Detection)
+CREATE TABLE IF NOT EXISTS opportunity_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL,
+    score_date DATE NOT NULL,
+    final_score REAL NOT NULL,
+    quality_score REAL,
+    text_length INTEGER,
+    has_buy_keywords INTEGER, -- 0 or 1 (boolean)
+    buy_keywords_count INTEGER DEFAULT 0,
+    status TEXT CHECK(status IN ('NEW', 'IMPROVED', 'DECLINED', 'STABLE')) DEFAULT 'NEW',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(url, score_date) -- Prevent duplicate entries for same URL on same date
+);
+
 -- Índices para optimización
 CREATE INDEX IF NOT EXISTS idx_experiments_status ON experiments(status);
 CREATE INDEX IF NOT EXISTS idx_training_results_experiment ON training_results(experiment_id);
 CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level);
 CREATE INDEX IF NOT EXISTS idx_system_logs_timestamp ON system_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_opportunity_history_url ON opportunity_history(url);
+CREATE INDEX IF NOT EXISTS idx_opportunity_history_date ON opportunity_history(score_date);
+CREATE INDEX IF NOT EXISTS idx_opportunity_history_status ON opportunity_history(status);
 
 -- Inserts iniciales
 INSERT OR IGNORE INTO config (key, value) VALUES 

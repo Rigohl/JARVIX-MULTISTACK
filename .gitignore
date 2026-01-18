@@ -51,12 +51,9 @@ data/*.db-wal
 data/experiments/
 data/logs/
 data/cache/
-data/actions/
-data/scores/test_*.jsonl
-
-# ============= GENERATED REPORTS =============
-data/reports/*.pdf
-data/top/perf_test_*.json
+# Exclude test databases
+science/test_*.db
+**/test_trends.db
 
 # ============= OS =============
 .DS_Store
