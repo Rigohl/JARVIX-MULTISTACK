@@ -33,6 +33,25 @@ interface ActionRecommendation {
   reason: string;
 }
 
+// Constants
+const TITLE_TRUNCATE_SUMMARY = 60;
+const TITLE_TRUNCATE_TABLE = 80;
+
+/**
+ * Calculate average of a numeric field from items array
+ */
+function calculateAverage(items: ScoreRecord[], field: 'final_score' | 'quality_score'): number {
+  if (items.length === 0) return 0;
+  return items.reduce((sum, item) => sum + item[field], 0) / items.length;
+}
+
+/**
+ * Truncate title with ellipsis
+ */
+function truncateTitle(title: string, maxLength: number): string {
+  return title.length > maxLength ? title.substring(0, maxLength) + '...' : title;
+}
+
 /**
  * Determine recommended action based on score
  */
@@ -244,9 +263,7 @@ export async function generatePDF(
     .font('Helvetica')
     .text(topData.count.toString(), 200, boxY + 80);
 
-  const avgScore = topData.items.length > 0 
-    ? topData.items.reduce((a, b) => a + b.final_score, 0) / topData.items.length 
-    : 0;
+  const avgScore = calculateAverage(topData.items, 'final_score');
   doc
     .font('Helvetica-Bold')
     .text('Avg Score:', 120, boxY + 110);
@@ -301,7 +318,7 @@ export async function generatePDF(
       .text(`${idx + 1}. ${action.action}`, 50, doc.y, { continued: true })
       .fillColor('#333')
       .font('Helvetica')
-      .text(` - ${item.title.substring(0, 60)}...`, { continued: false });
+      .text(` - ${truncateTitle(item.title, TITLE_TRUNCATE_SUMMARY)}`, { continued: false });
 
     doc.fontSize(10).text(`   Score: ${item.final_score.toFixed(1)} | ${action.reason}`, 70);
     doc.moveDown(0.5);
@@ -344,9 +361,7 @@ export async function generatePDF(
     .text(`• ${withKeywords} opportunities have buy intent signals`, 60);
   doc.text(`• ${cleanRecords} records passed all quality checks`, 60);
   
-  const avgQualityScore = topData.items.length > 0 
-    ? topData.items.reduce((a, b) => a + b.quality_score, 0) / topData.items.length 
-    : 0;
+  const avgQualityScore = calculateAverage(topData.items, 'quality_score');
   doc.text(`• Average quality score: ${avgQualityScore.toFixed(1)}/100`, 60);
 
   // ============ TOP-10 TABLE ============
@@ -405,7 +420,7 @@ export async function generatePDF(
       .fillColor('#333')
       .font('Helvetica')
       .fontSize(8)
-      .text(item.title.substring(0, 80) + (item.title.length > 80 ? '...' : ''), colX[1], tableY + 18, { width: 180 });
+      .text(truncateTitle(item.title, TITLE_TRUNCATE_TABLE), colX[1], tableY + 18, { width: 180 });
 
     doc.fontSize(9);
     doc.text(item.final_score.toFixed(1), colX[2], tableY + 5, { width: 50 });
