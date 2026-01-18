@@ -2,6 +2,7 @@
 
 using JSON
 using Statistics
+using Dates
 
 """
     recommend_actions(scored_records)
@@ -86,10 +87,29 @@ function compute_action_statistics(actions)
         )
     end
     
-    # Count actions
-    buy_count = count(r -> get(r, "action", "") == "BUY", actions)
-    monitor_count = count(r -> get(r, "action", "") == "MONITOR", actions)
-    skip_count = count(r -> get(r, "action", "") == "SKIP", actions)
+    # Count actions and compute average score by action type in a single pass
+    buy_count = 0
+    monitor_count = 0
+    skip_count = 0
+    buy_scores = Float64[]
+    monitor_scores = Float64[]
+    skip_scores = Float64[]
+    
+    for r in actions
+        action = get(r, "action", "")
+        score = get(r, "final_score", 0.0)
+        
+        if action == "BUY"
+            buy_count += 1
+            push!(buy_scores, score)
+        elseif action == "MONITOR"
+            monitor_count += 1
+            push!(monitor_scores, score)
+        elseif action == "SKIP"
+            skip_count += 1
+            push!(skip_scores, score)
+        end
+    end
     
     # Calculate percentages
     buy_percentage = (buy_count / total) * 100.0
@@ -99,16 +119,11 @@ function compute_action_statistics(actions)
     avg_confidence = mean(confidences)
     
     # Calculate average score by action type
-    avg_score_by_action = Dict()
-    for action_type in ["BUY", "MONITOR", "SKIP"]
-        action_records = filter(r -> get(r, "action", "") == action_type, actions)
-        if !isempty(action_records)
-            scores = [get(r, "final_score", 0.0) for r in action_records]
-            avg_score_by_action[action_type] = mean(scores)
-        else
-            avg_score_by_action[action_type] = 0.0
-        end
-    end
+    avg_score_by_action = Dict(
+        "BUY" => isempty(buy_scores) ? 0.0 : mean(buy_scores),
+        "MONITOR" => isempty(monitor_scores) ? 0.0 : mean(monitor_scores),
+        "SKIP" => isempty(skip_scores) ? 0.0 : mean(skip_scores)
+    )
     
     return Dict(
         "total_records" => total,
@@ -203,8 +218,6 @@ end
 
 # Main execution
 if !isinteractive()
-    using Dates
-    
     if length(ARGS) < 1
         println("Usage: actions.jl <run_id> [output_dir]")
         println("\nExample: julia actions.jl mvp_test_001 data")

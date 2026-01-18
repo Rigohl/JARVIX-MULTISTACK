@@ -3,7 +3,7 @@
 .SYNOPSIS
 JARVIX MVP Pipeline Orchestrator
 .DESCRIPTION
-Executes complete end-to-end pipeline: migrate → collect → curate → score → report
+Executes complete end-to-end pipeline: migrate → collect → curate → score → actions → report
 .PARAMETER RunId
 Run identifier (default: timestamp)
 .EXAMPLE
@@ -48,18 +48,25 @@ Write-Host "3/5 Curating data..." -ForegroundColor Cyan
 Write-Host ""
 
 # Step 4: Score
-Write-Host "4/5 Scoring (Julia)..." -ForegroundColor Cyan
+Write-Host "4/6 Scoring (Julia)..." -ForegroundColor Cyan
 julia -e 'using Pkg; Pkg.add("JSON"; skip_instantiate_check=true)' 2>&1 | Out-Null
 $scoreScript = Join-Path $PSScriptRoot "..\science\score.jl"
 & julia $scoreScript $RunId $DataDir 2>&1 | Write-Host -ForegroundColor Green
 Write-Host ""
 
-# Step 5: Report
-Write-Host "5/5 Generating report..." -ForegroundColor Cyan
+# Step 5: Actions
+Write-Host "5/6 Generating action recommendations..." -ForegroundColor Cyan
+$actionsScript = Join-Path $PSScriptRoot "..\science\actions.jl"
+& julia $actionsScript $RunId $DataDir 2>&1 | Write-Host -ForegroundColor Green
+Write-Host ""
+
+# Step 6: Report
+Write-Host "6/6 Generating report..." -ForegroundColor Cyan
 $reportScript = Join-Path $PSScriptRoot "..\app\report.ts"
 & npx ts-node $reportScript $RunId $DataDir 2>&1 | Write-Host -ForegroundColor Green
 Write-Host ""
 
 Write-Host "✅ PIPELINE COMPLETE" -ForegroundColor Green
+Write-Host "   Actions: $DataDir\actions\$RunId.jsonl" -ForegroundColor Cyan
 Write-Host "   Report: $DataDir\reports\$RunId.html" -ForegroundColor Cyan
 Write-Host ""
