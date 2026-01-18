@@ -204,7 +204,11 @@ export async function generatePDF(
   // Load data
   const topFile = path.join(outputDir, 'top', `${runId}.json`);
   if (!fs.existsSync(topFile)) {
-    throw new Error(`Top file not found: ${topFile}`);
+    throw new Error(
+      `Top file not found: ${topFile}\n` +
+      `Please run the scoring pipeline first:\n` +
+      `  julia science/score.jl ${runId} ${outputDir}`
+    );
   }
 
   console.log(`📄 Generating PDF for run: ${runId}`);
