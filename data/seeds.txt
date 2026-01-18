@@ -1,5 +1,5 @@
-https://example.com
 https://httpbin.org/html
 https://httpbin.org/json
-https://www.w3schools.com/html/
-https://www.wikipedia.org/
+https://example.com
+https://httpbin.org/user-agent
+https://httpbin.org/headers

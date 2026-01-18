@@ -4,12 +4,19 @@ using Distributed
 using JSON
 using Statistics
 
-"""
-    parallel_score_mvp(run_id; output_dir="data", num_workers=4)
+# Define scoring function at module level
+function compute_score(record)
+    quality = get(record, "quality_score", 0) * 0.4
+    buy_keywords = get(record, "has_buy_keywords", false) ? 30.0 : 0.0
+    text_len = get(record, "text_length", 0)
+    normalized_len = min(100.0, (text_len / 5000.0) * 100.0) * 0.2
+    errors = get(record, "errors", [])
+    error_penalty = length(errors) * 5.0
+    final = quality + buy_keywords + normalized_len - error_penalty
+    return max(0.0, min(100.0, final))
+end
 
-Score cleaned data in parallel using Distributed.jl.
-Phase 6: Scalability enhancement for 10K+ URLs.
-"""
+# Parallel scoring function
 function parallel_score_mvp(run_id; output_dir="data", num_workers=4)
     println("📊 Starting parallel scoring for run: $run_id")
     println("🚀 Launching $num_workers worker processes...")
@@ -19,13 +26,12 @@ function parallel_score_mvp(run_id; output_dir="data", num_workers=4)
     if current_workers == 1 && num_workers > 1
         addprocs(num_workers - 1)
         println("✓ Added $(nworkers() - 1) workers (total: $(nworkers()))")
+        
+        # Load this script on all workers so they have compute_score
+        @everywhere include(@__FILE__)
     else
         println("✓ Using existing $(nworkers()) workers")
     end
-    
-    # Load required packages on all workers
-    @everywhere using JSON
-    @everywhere using Statistics
     
     # Read clean JSONL
     clean_file = joinpath(output_dir, "clean", "$run_id.jsonl")
@@ -48,18 +54,6 @@ function parallel_score_mvp(run_id; output_dir="data", num_workers=4)
     if isempty(records)
         println("⚠️  No records to score")
         return
-    end
-    
-    # Define scoring function on all workers
-    @everywhere function compute_score(record)
-        quality = get(record, "quality_score", 0) * 0.4
-        buy_keywords = get(record, "has_buy_keywords", false) ? 30.0 : 0.0
-        text_len = get(record, "text_length", 0)
-        normalized_len = min(100.0, (text_len / 5000.0) * 100.0) * 0.2
-        errors = get(record, "errors", [])
-        error_penalty = length(errors) * 5.0
-        final = quality + buy_keywords + normalized_len - error_penalty
-        return max(0.0, min(100.0, final))
     end
     
     # Score in parallel
@@ -116,11 +110,7 @@ function parallel_score_mvp(run_id; output_dir="data", num_workers=4)
     return top_file
 end
 
-"""
-    benchmark_parallel_scoring(num_records; num_workers=4)
-
-Benchmark parallel scoring performance.
-"""
+# Benchmark function
 function benchmark_parallel_scoring(num_records; num_workers=4)
     println("\n🏁 BENCHMARK: Parallel Scoring")
     println("Records: $num_records")
@@ -129,11 +119,12 @@ function benchmark_parallel_scoring(num_records; num_workers=4)
     # Add workers
     if nworkers() == 1 && num_workers > 1
         addprocs(num_workers - 1)
+        # Load this script on workers
+        @everywhere include(@__FILE__)
     end
     
-    @everywhere using JSON
-    
     # Generate synthetic records
+    println("Generating $num_records synthetic records...")
     records = []
     for i in 1:num_records
         push!(records, Dict(
@@ -144,17 +135,6 @@ function benchmark_parallel_scoring(num_records; num_workers=4)
             "quality_score" => rand(50:100),
             "errors" => []
         ))
-    end
-    
-    @everywhere function compute_score(record)
-        quality = get(record, "quality_score", 0) * 0.4
-        buy_keywords = get(record, "has_buy_keywords", false) ? 30.0 : 0.0
-        text_len = get(record, "text_length", 0)
-        normalized_len = min(100.0, (text_len / 5000.0) * 100.0) * 0.2
-        errors = get(record, "errors", [])
-        error_penalty = length(errors) * 5.0
-        final = quality + buy_keywords + normalized_len - error_penalty
-        return max(0.0, min(100.0, final))
     end
     
     # Benchmark serial
@@ -186,7 +166,7 @@ function benchmark_parallel_scoring(num_records; num_workers=4)
 end
 
 # Main execution
-if !isinteractive()
+if !isinteractive() && abspath(PROGRAM_FILE) == @__FILE__
     using Dates
     
     if length(ARGS) < 1
@@ -197,26 +177,26 @@ if !isinteractive()
     end
     
     if ARGS[1] == "--benchmark"
-        num_records = get(ARGS, 2, "10000") |> x -> parse(Int, x)
-        num_workers = get(ARGS, 3, "4") |> x -> parse(Int, x)
+        num_records = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 10000
+        num_workers = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 4
         try
             benchmark_parallel_scoring(num_records; num_workers=num_workers)
             println("\n✅ Benchmark completed successfully!")
         catch e
             println("❌ Error: $e")
-            exit(1)
+            rethrow()
         end
     else
         run_id = ARGS[1]
-        output_dir = get(ARGS, 2, "data")
-        num_workers = get(ARGS, 3, "4") |> x -> parse(Int, x)
+        output_dir = length(ARGS) >= 2 ? ARGS[2] : "data"
+        num_workers = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 4
         
         try
             parallel_score_mvp(run_id; output_dir=output_dir, num_workers=num_workers)
             println("\n✅ Parallel scoring completed successfully!")
         catch e
             println("❌ Error: $e")
-            exit(1)
+            rethrow()
         end
     end
 end

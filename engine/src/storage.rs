@@ -4,7 +4,7 @@ use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
-use parquet::basic::Compression;
+use parquet::basic::{Compression, GzipLevel};
 use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
@@ -21,7 +21,7 @@ impl ParquetStorage {
     /// Create a new Parquet storage manager
     pub fn new() -> Self {
         Self {
-            compression: Compression::GZIP,
+            compression: Compression::GZIP(GzipLevel::default()),
         }
     }
 
