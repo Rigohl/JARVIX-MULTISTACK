@@ -1,3 +1,3 @@
 pub mod enrichment;
 
-pub use enrichment::{enrich_score, EnrichmentConfig, EnrichedScore};
+pub use enrichment::{enrich_score, EnrichmentConfig, EnrichedScore, EnrichmentEngine};
