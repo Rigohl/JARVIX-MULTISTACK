@@ -1,16 +1,20 @@
 {
   "name": "jarvix-app",
-  "version": "1.0.0",
-  "description": "JARVIX MVP - Report Generator",
+  "version": "2.0.0",
+  "description": "JARVIX v2.0 - Scalable Report Generator",
   "main": "index.js",
   "scripts": {
     "report": "ts-node report.ts",
+    "batch-pdf": "ts-node batch_pdf.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["jarvix", "osint", "scoring"],
+  "keywords": ["jarvix", "osint", "scoring", "scalability"],
   "author": "JARVIX Team",
   "license": "MIT",
   "type": "commonjs",
+  "dependencies": {
+    "puppeteer": "^23.11.1"
+  },
   "devDependencies": {
     "@types/node": "^25.0.9",
     "ts-node": "^10.9.2",
