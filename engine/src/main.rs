@@ -1,70 +1,61 @@
-use anyhow::Result;
+mod parallel;
+mod storage;
+
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use jarvix::{enrich_score, EnrichmentConfig, EnrichmentEngine};
-use serde_json;
-use std::fs;
 use std::path::PathBuf;
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
+
+use parallel::{ParallelConfig, ParallelDownloader};
+use storage::ParquetStorage;
 
 #[derive(Parser)]
-#[command(name = "jarvix-enrichment")]
-#[command(about = "JARVIX External Data Enrichment CLI", long_about = None)]
+#[command(name = "jarvix")]
+#[command(about = "JARVIX v2.0 - Scalable OSINT & Scoring Engine", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    /// Enable verbose logging
+    #[arg(short, long, global = true)]
+    verbose: bool,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Enrich a single URL
-    Enrich {
-        /// URL to enrich
-        #[arg(short, long)]
-        url: String,
+    /// Download URLs in parallel (Phase 6: Scalability)
+    Collect {
+        /// Run identifier
+        #[arg(long)]
+        run: String,
 
-        /// Base score for the URL
-        #[arg(short, long)]
-        score: f64,
-
-        /// Path to config file
-        #[arg(short, long, default_value = "data/api_config.toml")]
-        config: PathBuf,
-
-        /// Output format: json or text
-        #[arg(short, long, default_value = "text")]
-        format: String,
-    },
-
-    /// Enrich a batch of scored records from JSONL file
-    Batch {
-        /// Input JSONL file with scored records
-        #[arg(short, long)]
+        /// Input file with URLs (one per line)
+        #[arg(long)]
         input: PathBuf,
 
-        /// Output JSONL file for enriched records
-        #[arg(short, long)]
+        /// Maximum concurrent downloads
+        #[arg(long, default_value = "100")]
+        concurrent: usize,
+
+        /// Timeout per request in seconds
+        #[arg(long, default_value = "30")]
+        timeout: u64,
+
+        /// Output directory
+        #[arg(long, default_value = "data")]
         output: PathBuf,
-
-        /// Path to config file
-        #[arg(short, long, default_value = "data/api_config.toml")]
-        config: PathBuf,
-
-        /// Show progress during processing
-        #[arg(short, long, default_value = "true")]
-        verbose: bool,
     },
 
-    /// Initialize or reset the enrichment cache
-    InitCache {
-        /// Path to config file
-        #[arg(short, long, default_value = "data/api_config.toml")]
-        config: PathBuf,
-    },
+    /// Benchmark mode: test with N URLs
+    Benchmark {
+        /// Number of test URLs to generate
+        #[arg(long, default_value = "1000")]
+        urls: usize,
 
-    /// Show cache statistics
-    CacheStats {
-        /// Path to config file
-        #[arg(short, long, default_value = "data/api_config.toml")]
-        config: PathBuf,
+        /// Maximum concurrent downloads
+        #[arg(long, default_value = "100")]
+        concurrent: usize,
     },
 }
 
@@ -72,185 +63,132 @@ enum Commands {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // Initialize logging
+    let level = if cli.verbose { Level::DEBUG } else { Level::INFO };
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(level)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .context("Failed to set tracing subscriber")?;
+
     match cli.command {
-        Commands::Enrich {
-            url,
-            score,
-            config,
-            format,
-        } => {
-            let config_path = config.to_str()
-                .ok_or_else(|| anyhow::anyhow!("Invalid config path"))?;
-            let enriched = enrich_score(&url, score, config_path).await?;
-
-            match format.as_str() {
-                "json" => {
-                    println!("{}", serde_json::to_string_pretty(&enriched)?);
-                }
-                _ => {
-                    println!("URL: {}", enriched.url);
-                    println!("Base Score: {:.2}", enriched.base_score);
-                    println!("Enriched Score: {:.2}", enriched.enriched_score);
-                    println!(
-                        "Improvement: {:+.2}%",
-                        enriched.enriched_score - enriched.base_score
-                    );
-                    println!("Site Type: {:?}", enriched.site_type);
-
-                    if !enriched.adjustments.is_empty() {
-                        println!("\nAdjustments:");
-                        for adj in enriched.adjustments {
-                            println!(
-                                "  {} {:+.1}%: {}",
-                                adj.source, adj.adjustment, adj.reason
-                            );
-                        }
-                    }
-
-                    if let Some(trending) = enriched.enrichment_data.is_trending {
-                        println!("\nTrending: {}", trending);
-                    }
-                    if let Some(shopify) = enriched.enrichment_data.is_shopify {
-                        println!("Shopify Store: {}", shopify);
-                    }
-                    if let Some(age) = enriched.enrichment_data.domain_age_years {
-                        println!("Domain Age: {:.1} years", age);
-                    }
-                }
-            }
-        }
-
-        Commands::Batch {
+        Commands::Collect {
+            run,
             input,
+            concurrent,
+            timeout,
             output,
-            config,
-            verbose,
         } => {
-            let config_content = fs::read_to_string(&config)?;
-            let engine_config: EnrichmentConfig = toml::from_str(&config_content)?;
-            let engine = EnrichmentEngine::new(engine_config)?;
-
-            let content = fs::read_to_string(&input)?;
-            let lines: Vec<&str> = content.lines().collect();
-            let total = lines.len();
-
-            if verbose {
-                println!("Processing {} records from {:?}", total, input);
-            }
-
-            let mut enriched_records = Vec::new();
-            let mut success_count = 0;
-
-            for (i, line) in lines.iter().enumerate() {
-                if let Ok(record) = serde_json::from_str::<serde_json::Value>(line) {
-                    if let (Some(url), Some(score)) = (
-                        record.get("url").and_then(|v| v.as_str()),
-                        record.get("final_score").and_then(|v| v.as_f64()),
-                    ) {
-                        match engine.enrich_url(url, score).await {
-                            Ok(enriched) => {
-                                let mut new_record = record.clone();
-                                new_record["enriched_score"] =
-                                    serde_json::json!(enriched.enriched_score);
-                                new_record["site_type"] = serde_json::json!(enriched.site_type);
-                                new_record["enrichment_adjustments"] =
-                                    serde_json::json!(enriched.adjustments);
-                                new_record["enrichment_data"] =
-                                    serde_json::json!(enriched.enrichment_data);
-
-                                enriched_records.push(new_record);
-                                success_count += 1;
-
-                                if verbose && (i + 1) % 10 == 0 {
-                                    println!("Processed {}/{} records", i + 1, total);
-                                }
-                            }
-                            Err(e) => {
-                                if verbose {
-                                    eprintln!("Error enriching {}: {}", url, e);
-                                }
-                                enriched_records.push(record.clone());
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Write output
-            let output_lines: Vec<String> = enriched_records
-                .iter()
-                .map(|r| serde_json::to_string(r))
-                .collect::<Result<Vec<String>, _>>()?;
-
-            fs::write(&output, output_lines.join("\n"))?;
-
-            if verbose {
-                println!("\n=== Summary ===");
-                println!("Total records: {}", total);
-                println!("Successfully enriched: {}", success_count);
-                println!("Output written to: {:?}", output);
-            }
+            info!("Starting collection for run: {}", run);
+            collect_urls(&run, &input, &output, concurrent, timeout).await?;
         }
-
-        Commands::InitCache { config } => {
-            let config_content = fs::read_to_string(&config)?;
-            let engine_config: EnrichmentConfig = toml::from_str(&config_content)?;
-
-            use rusqlite::Connection;
-            let conn = Connection::open(&engine_config.cache.database_path)?;
-
-            conn.execute("DROP TABLE IF EXISTS enrichment_cache", [])?;
-            conn.execute(
-                "CREATE TABLE enrichment_cache (
-                    url_hash TEXT PRIMARY KEY,
-                    url TEXT NOT NULL,
-                    enrichment_data TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                )",
-                [],
-            )?;
-            conn.execute(
-                "CREATE INDEX idx_created_at ON enrichment_cache(created_at)",
-                [],
-            )?;
-
-            println!("Cache initialized successfully at: {}", engine_config.cache.database_path);
+        Commands::Benchmark { urls, concurrent } => {
+            info!("Running benchmark with {} URLs", urls);
+            benchmark(urls, concurrent).await?;
         }
+    }
 
-        Commands::CacheStats { config } => {
-            let config_content = fs::read_to_string(&config)?;
-            let engine_config: EnrichmentConfig = toml::from_str(&config_content)?;
+    Ok(())
+}
 
-            use rusqlite::Connection;
-            let conn = Connection::open(&engine_config.cache.database_path)?;
+/// Collect URLs from input file and download in parallel
+async fn collect_urls(
+    run_id: &str,
+    input_path: &PathBuf,
+    output_dir: &PathBuf,
+    max_concurrent: usize,
+    timeout_secs: u64,
+) -> Result<()> {
+    // Read URLs from input file
+    let content = std::fs::read_to_string(input_path)
+        .context("Failed to read input file")?;
+    
+    let urls: Vec<String> = content
+        .lines()
+        .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
+        .map(|line| line.trim().to_string())
+        .collect();
 
-            let count: i64 = conn.query_row(
-                "SELECT COUNT(*) FROM enrichment_cache",
-                [],
-                |row| row.get(0),
-            )?;
+    info!("Loaded {} URLs from {:?}", urls.len(), input_path);
 
-            println!("=== Cache Statistics ===");
-            println!("Database: {}", engine_config.cache.database_path);
-            println!("Total cached entries: {}", count);
-            println!("Cache TTL: {} hours", engine_config.cache.cache_ttl_hours);
+    // Configure parallel downloader
+    let config = ParallelConfig {
+        max_concurrent,
+        timeout_secs,
+        max_retries: 3,
+    };
 
-            if count > 0 {
-                let oldest: String = conn.query_row(
-                    "SELECT created_at FROM enrichment_cache ORDER BY created_at ASC LIMIT 1",
-                    [],
-                    |row| row.get(0),
-                )?;
+    // Download in parallel
+    let downloader = ParallelDownloader::new(config)?;
+    let results = downloader.download_all(urls).await;
 
-                let newest: String = conn.query_row(
-                    "SELECT created_at FROM enrichment_cache ORDER BY created_at DESC LIMIT 1",
-                    [],
-                    |row| row.get(0),
-                )?;
+    // Save to Parquet
+    let storage = ParquetStorage::new();
+    let output_path = output_dir.join("raw").join(format!("{}.parquet", run_id));
+    storage.save_results(&results, &output_path)?;
 
-                println!("Oldest entry: {}", oldest);
-                println!("Newest entry: {}", newest);
-            }
+    // Print summary
+    let success_count = results.iter().filter(|r| r.success).count();
+    let total = results.len();
+    let success_rate = (success_count as f64 / total as f64) * 100.0;
+
+    info!("Collection complete: {}/{} successful ({:.1}%)", 
+          success_count, total, success_rate);
+
+    Ok(())
+}
+
+/// Benchmark mode: generate test URLs and measure performance
+async fn benchmark(url_count: usize, max_concurrent: usize) -> Result<()> {
+    use std::time::Instant;
+
+    info!("Generating {} test URLs", url_count);
+    
+    // Generate test URLs using httpbin for reliable testing
+    let test_urls: Vec<String> = (0..url_count)
+        .map(|i| format!("https://httpbin.org/delay/0?id={}", i))
+        .collect();
+
+    info!("Starting benchmark with {} concurrent workers", max_concurrent);
+    let start = Instant::now();
+
+    let config = ParallelConfig {
+        max_concurrent,
+        timeout_secs: 10,
+        max_retries: 1,
+    };
+
+    let downloader = ParallelDownloader::new(config)?;
+    let results = downloader.download_all(test_urls).await;
+
+    let duration = start.elapsed();
+    let success_count = results.iter().filter(|r| r.success).count();
+    let avg_time_per_url = duration.as_millis() as f64 / url_count as f64;
+    let urls_per_second = url_count as f64 / duration.as_secs_f64();
+
+    // Print benchmark results
+    println!("\n=== BENCHMARK RESULTS ===");
+    println!("URLs processed:     {}", url_count);
+    println!("Successful:         {} ({:.1}%)", success_count, 
+             (success_count as f64 / url_count as f64) * 100.0);
+    println!("Total time:         {:.2}s", duration.as_secs_f64());
+    println!("Avg time per URL:   {:.1}ms", avg_time_per_url);
+    println!("URLs per second:    {:.1}", urls_per_second);
+    println!("Concurrent workers: {}", max_concurrent);
+    
+    // Check if we meet Phase 6 targets
+    let target_met = avg_time_per_url < 100.0 && urls_per_second > 10.0;
+    if target_met {
+        println!("\n✅ Performance targets MET!");
+        println!("   - Avg time < 100ms per URL: ✓");
+        println!("   - Throughput > 10 URLs/s: ✓");
+    } else {
+        println!("\n⚠️  Performance targets NOT MET");
+        if avg_time_per_url >= 100.0 {
+            println!("   - Avg time < 100ms per URL: ✗ (actual: {:.1}ms)", avg_time_per_url);
+        }
+        if urls_per_second <= 10.0 {
+            println!("   - Throughput > 10 URLs/s: ✗ (actual: {:.1})", urls_per_second);
         }
     }
 

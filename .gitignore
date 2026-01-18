@@ -51,9 +51,11 @@ data/*.db-wal
 data/experiments/
 data/logs/
 data/cache/
-# Exclude test databases
-science/test_*.db
-**/test_trends.db
+data/raw/*.parquet
+data/scores/*.jsonl
+data/top/*.json
+data/reports/*.html
+data/reports/*.pdf
 
 # ============= OS =============
 .DS_Store
