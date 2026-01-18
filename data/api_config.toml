@@ -1,0 +1,55 @@
+# JARVIX External Data Enrichment API Configuration
+
+[apis]
+# Enable/disable individual APIs
+google_trends_enabled = true
+shopify_detection_enabled = true
+crunchbase_enabled = false  # Paid API - disabled by default
+trustpilot_enabled = true
+whois_enabled = true
+
+[google_trends]
+# Free API - no key required
+# Rate limit: 100 requests per hour
+rate_limit_per_hour = 100
+timeout_seconds = 10
+
+[shopify]
+# HTML signature detection - no API key needed
+# Rate limit: 200 requests per hour
+rate_limit_per_hour = 200
+timeout_seconds = 5
+
+[crunchbase]
+# Paid API - requires API key
+# Get your key from: https://data.crunchbase.com/docs/using-the-api
+api_key = ""
+rate_limit_per_hour = 200
+timeout_seconds = 10
+
+[trustpilot]
+# Business data extraction
+# Rate limit: 100 requests per hour (be respectful)
+rate_limit_per_hour = 100
+timeout_seconds = 10
+
+[whois]
+# Domain age checking via CLI
+# Rate limit: 50 requests per hour
+rate_limit_per_hour = 50
+timeout_seconds = 15
+
+[cache]
+# SQLite cache settings
+database_path = "data/jarvix.db"
+cache_ttl_hours = 168  # 7 days
+enable_redis = false
+redis_url = "redis://127.0.0.1:6379"
+
+[scoring]
+# Score adjustments based on enrichment data
+trending_boost = 20.0  # +20% if trending on Google
+shopify_boost = 15.0   # +15% confidence if Shopify store
+funding_boost = 10.0   # +10% if startup with funding
+low_rating_penalty = -5.0  # -5% if rating < 3 stars
+domain_age_boost = 5.0  # +5% if domain > 2 years
