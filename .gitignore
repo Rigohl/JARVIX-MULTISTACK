@@ -11,6 +11,7 @@ train/build/
 .Python
 *.so
 .env
+__pycache__/
 
 # ============= NODE =============
 app/node_modules/
@@ -21,12 +22,19 @@ app/.turbo/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+node_modules/
 
 # ============= RUST =============
 engine/target/
 engine/Cargo.lock
 engine/**/*.rs.bk
 *.rlib
+
+# ============= BUILD & DEPLOYMENT =============
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.tar.gz
 
 # ============= IDE & EDITOR =============
 .vscode/
