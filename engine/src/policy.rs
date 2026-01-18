@@ -46,9 +46,7 @@ pub async fn check_robots_txt(domain: &str) -> Result<bool> {
 
 /// Parse robots.txt content and check if user agent is allowed
 fn is_allowed_by_robots(robots_txt: &str, user_agent: &str) -> bool {
-    let mut current_agents: Vec<String> = Vec::new();
     let mut is_relevant_section = false;
-    let mut disallowed_paths: Vec<String> = Vec::new();
     
     for line in robots_txt.lines() {
         let line = line.trim();
@@ -60,7 +58,6 @@ fn is_allowed_by_robots(robots_txt: &str, user_agent: &str) -> bool {
         
         if line.to_lowercase().starts_with("user-agent:") {
             let agent = line.split(':').nth(1).unwrap_or("").trim().to_lowercase();
-            current_agents.push(agent.clone());
             
             // Check if this section applies to us
             is_relevant_section = agent == "*" || 
@@ -72,7 +69,6 @@ fn is_allowed_by_robots(robots_txt: &str, user_agent: &str) -> bool {
                 // Disallow all - we should not crawl this site
                 return false;
             }
-            disallowed_paths.push(path.to_string());
         }
     }
     

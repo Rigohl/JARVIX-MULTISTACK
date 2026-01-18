@@ -45,8 +45,7 @@ engine/
       ├── main.rs        → CLI (migrate, discover, collect, curate)
       ├── db.rs          → SQLite EventLogger + Discovery Cache
       ├── discovery.rs   → Automatic competitor discovery (Phase 2) ✨
-      ├── policy.rs      → Domain validation + robots.txt compliance
-      └── collector.rs   → Async HTTP + HTML parser (coming soon)
+      └── policy.rs      → Domain validation + robots.txt compliance
 
 science/
   └── score.jl           → Scoring algorithm (ponderado)
