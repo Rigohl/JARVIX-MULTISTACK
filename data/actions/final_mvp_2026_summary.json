@@ -1,0 +1,17 @@
+{
+  "statistics": {
+    "buy_count": 0,
+    "buy_percentage": 0.0,
+    "avg_score_by_action": {
+      "BUY": 0.0,
+      "MONITOR": 58.0,
+      "SKIP": 36.828
+    },
+    "total_records": 2,
+    "monitor_count": 1,
+    "avg_confidence": 0.77,
+    "skip_count": 1
+  },
+  "run_id": "final_mvp_2026",
+  "timestamp": "2026-01-17T21:00:58.758"
+}

@@ -25,6 +25,10 @@ parquet = "53"
 arrow = "53"
 regex = "1.11"
 rayon = "1.10"
+url = "2.5"
+toml = "0.8"
+async-trait = "0.1"
+sha2 = "0.10"
 
 [profile.release]
 opt-level = 3
