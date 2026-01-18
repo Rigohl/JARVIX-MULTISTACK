@@ -115,6 +115,8 @@ Output: data/scores/`<run_id>`.jsonl (all), data/top/`<run_id>`.json (top 10)
 ## 📚 Documentation
 
 For detailed information, see:
+- **README.md** - This file (MVP overview)
+- **V2_ROADMAP.md** - 🚀 Evolution to "Intelligence Factory" (acciones, auto-discovery, APIs, trends)
 - **D:\PROYECTOS.md** - All projects including JARVIX details
 - **D:\REGLAS_IMPLEMENTADAS.md** - Implementation patterns
 - **D:\SISTEMA.md** - Architecture overview
