@@ -2,6 +2,12 @@
 
 **Status**: ✅ v2.0 Production Release - 12,446 LOC | 6 Phases | All Tests PASS
 
+## 📖 Quick Links
+- [🤖 Agents Architecture](AGENTS.md) - Complete system agents documentation
+- [📁 Project Structure](STRUCTURE.md) - Directory organization
+- [📊 Capabilities & Results](EXPECTED_RESULTS.md) - Expected outputs
+- [📚 Documentation Hub](docs/README.md) - Comprehensive guides
+
 ## 📦 Release Information
 
 - **Version**: v2.0.0 (Production)
@@ -151,11 +157,10 @@ See **PHASE3_TRENDS.md** for complete documentation.
 
 For detailed information, see:
 - **README.md** - This file (project overview)
-- **DISCOVERY.md** - 📖 Complete Phase 2 Discovery documentation
-- **V2_ROADMAP.md** - 🚀 Evolution to "Intelligence Factory" (acciones, auto-discovery, APIs, trends)
-- **D:\PROYECTOS.md** - All projects including JARVIX details
-- **D:\REGLAS_IMPLEMENTADAS.md** - Implementation patterns
-- **D:\SISTEMA.md** - Architecture overview
+- **[AGENTS.md](AGENTS.md)** - 🤖 Complete agents and components architecture
+- **[STRUCTURE.md](STRUCTURE.md)** - 📁 Project structure and organization
+- **[EXPECTED_RESULTS.md](EXPECTED_RESULTS.md)** - 📊 Expected outputs and capabilities matrix
+- **[docs/](docs/)** - 📖 Comprehensive documentation (6 detailed guides)
 
 ## ✨ Phase 2 Features
 
