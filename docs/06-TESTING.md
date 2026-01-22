@@ -1,5 +1,9 @@
 # JARVIX v2.0 - Testing & Validation
 
+**For agent architecture and implementation details, see [../AGENTS.md](../AGENTS.md)**
+
+---
+
 ## Test Overview
 
 All 6 phases have been tested and validated. **6/6 tests passed** ✅

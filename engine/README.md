@@ -1,5 +1,9 @@
 # JARVIX Engine - External Data Enrichment
 
+**For complete agent architecture, see [../AGENTS.md](../AGENTS.md) - Enrichment Agent section**
+
+---
+
 This module provides external data enrichment capabilities for the JARVIX scoring system.
 
 ## Features

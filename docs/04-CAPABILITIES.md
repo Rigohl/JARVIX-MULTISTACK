@@ -1,5 +1,9 @@
 # JARVIX v2.0 - Capabilities & Expected Results
 
+**For detailed agent architecture and implementation, see [../AGENTS.md](../AGENTS.md)**
+
+---
+
 ## v1.0 vs v2.0 Transformation
 
 ### v1.0 (MVP - Current)
