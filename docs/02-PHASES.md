@@ -1,5 +1,9 @@
 # JARVIX v2.0 - All Phases Summary
 
+**For detailed agent architecture, see [../AGENTS.md](../AGENTS.md)**
+
+---
+
 ## Phase 1: Recommended Actions Engine ✅
 
 **Language**: Julia | **LOC**: 529 | **Status**: Complete

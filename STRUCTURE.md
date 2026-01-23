@@ -72,6 +72,7 @@ JARVIX-MULTISTACK/
 │
 ├── jarvix-v2.0.0.exe         → Production binary (11.9 MB, release-optimized)
 ├── README.md                 → Main project documentation
+├── AGENTS.md                 → Complete agents & components architecture
 ├── .copilot-instructions.md  → GitHub Copilot context (150 LOC)
 ├── Cargo.lock                → Rust lock file (for reproducibility)
 └── STRUCTURE.md              → This file
@@ -122,3 +123,20 @@ cargo build --release
 - **Commits**: 40+ (including merges)
 - **Tests**: ✅ All passed (6/6 phases)
 - **Release**: v2.0.0 tagged & pushed
+
+## Documentation Files
+
+For comprehensive understanding of the system:
+
+| File | Purpose |
+|------|---------|
+| **README.md** | Main project overview and quick start |
+| **AGENTS.md** | Complete agents and components architecture |
+| **STRUCTURE.md** | This file - directory organization |
+| **EXPECTED_RESULTS.md** | Capabilities matrix and expected outputs |
+| **docs/README.md** | Documentation hub with navigation |
+| **docs/01-OVERVIEW.md** | Project vision and architecture |
+| **docs/02-PHASES.md** | All 6 phases detailed breakdown |
+| **docs/04-CAPABILITIES.md** | Feature capabilities and comparisons |
+| **docs/05-SCALABILITY.md** | Performance tuning and optimization |
+| **docs/06-TESTING.md** | Test results and validation |

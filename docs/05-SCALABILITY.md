@@ -1,5 +1,9 @@
 # JARVIX v2.0 - Scalability & Performance Guide
 
+**For agent-specific performance details, see [../AGENTS.md](../AGENTS.md)**
+
+---
+
 ## Performance Architecture
 
 ### Bottleneck Analysis & Solutions

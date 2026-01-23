@@ -116,8 +116,8 @@ cd engine && cargo build --release
 
 ## Next Steps
 
-- [Phases Documentation](02-PHASES.md) - All 6 phases details
-- [Architecture Details](03-ARCHITECTURE.md) - System design
-- [Capabilities Matrix](04-CAPABILITIES.md) - Expected outputs
-- [Scalability Guide](05-SCALABILITY.md) - Performance tuning
-- [Testing & Validation](06-TESTING.md) - QA procedures
+- **[Agents Architecture](../AGENTS.md)** - Complete agents and components documentation
+- **[Phases Documentation](02-PHASES.md)** - All 6 phases details
+- **[Capabilities Matrix](04-CAPABILITIES.md)** - Expected outputs
+- **[Scalability Guide](05-SCALABILITY.md)** - Performance tuning
+- **[Testing & Validation](06-TESTING.md)** - QA procedures

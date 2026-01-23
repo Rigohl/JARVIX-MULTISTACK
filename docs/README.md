@@ -2,7 +2,16 @@
 
 Welcome to JARVIX v2.0 - Intelligence Factory for OSINT & Competitor Analysis
 
-## Quick Navigation
+## 📑 Core Documentation
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| **[../README.md](../README.md)** | Project overview & quick start | Everyone |
+| **[../AGENTS.md](../AGENTS.md)** | Complete agents architecture | Developers, Architects |
+| **[../STRUCTURE.md](../STRUCTURE.md)** | Project structure & organization | Developers |
+| **[../EXPECTED_RESULTS.md](../EXPECTED_RESULTS.md)** | Capabilities & expected outputs | Product, Business |
+
+## 📚 Detailed Documentation
 
 | Document | Purpose | Audience |
 |----------|---------|----------|

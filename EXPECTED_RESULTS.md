@@ -1,5 +1,15 @@
 # JARVIX v2.0 - Resultados Esperados & Capabilities
 
+## Documentación Relacionada
+
+Para más información detallada, consulta:
+- **[README.md](README.md)** - Visión general del proyecto
+- **[AGENTS.md](AGENTS.md)** - Arquitectura completa de agentes y componentes
+- **[STRUCTURE.md](STRUCTURE.md)** - Estructura del proyecto
+- **[docs/](docs/)** - Documentación técnica detallada
+
+---
+
 ## Transformación v1.0 → v2.0
 
 ### v1.0 (MVP Actual)
