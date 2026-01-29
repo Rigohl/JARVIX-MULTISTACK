@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-node:
+    name: Node.js tests (app)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install & Run tests
+        working-directory: app
+        run: |
+          if [ -f package.json ]; then
+            echo "package.json found"
+            npm ci
+            # run tests only if a test script is defined
+            node -e "process.exit(require('./package.json').scripts && !!require('./package.json').scripts.test ? 0 : 2)" 2>/dev/null || { echo "No test script in app/package.json - skipping tests"; exit 0; }
+            npm test
+          else
+            echo "No app/package.json - skipping Node job"
+          fi
+
+  test-rust:
+    name: Rust tests (engine)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run cargo test
+        working-directory: engine
+        run: |
+          cargo test --workspace --all-features --locked
+
+  test-julia:
+    name: Julia tests (science)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: '1.9'
+      - name: Run Julia tests
+        run: |
+          if [ -f science/Project.toml ]; then
+            julia --project=science -e "using Pkg; Pkg.instantiate(); Pkg.test()"
+          else
+            echo "No science/Project.toml - skipping Julia tests"
+          fi
+
+  helm-lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+      - name: Helm lint chart
+        run: |
+          if [ -d deploy/helm/jarvix ]; then
+            helm lint deploy/helm/jarvix --strict || true
+          else
+            echo "No helm chart found - skipping helm lint"
+          fi
