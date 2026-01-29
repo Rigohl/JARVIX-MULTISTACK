@@ -3,6 +3,7 @@
 This doc shows a minimal POC flow using Supabase or Neon (Postgres) and Helm.
 
 ## Prereqs
+
 - Kubernetes cluster (minikube / k3s / cloud)
 - Helm 3
 - Docker or registry to push images
@@ -34,6 +35,77 @@ bash scripts/migrate_sqlite_to_postgres.sh data/metrics.sqlite "$DATABASE_URL"
 ```
 
 Notes:
+
 - The migration script imports all columns as TEXT (POC). Review and apply proper types after migration.
 - For Supabase: use the dashboard to get `DATABASE_URL`. For Neon: use console.
 - For production consider proper backups, TLS and secrets in Kubernetes (use sealed-secrets or external secret stores).
+
+## Docker credentials → GitHub secrets
+
+If you want CI to push images to Docker Hub automatically, create these repository secrets:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+
+You can extract your Docker Hub credentials locally then upload them manually, or use the provided helper script.
+
+### Extract and upload automatically (recommended for POC)
+
+1. Requirements: `jq`, GitHub CLI `gh` (authenticated), and Docker logged-in locally.
+2. Run (in repo root):
+
+```bash
+# dry-run: shows username only
+./scripts/export_docker_to_github_secrets.sh --dry-run
+
+# interactive: will prompt before setting secrets
+./scripts/export_docker_to_github_secrets.sh --repo OWNER/REPO
+
+# non-interactive (be careful!)
+./scripts/export_docker_to_github_secrets.sh --repo OWNER/REPO --yes
+```
+
+### Create token via UI and set from clipboard (recommended, secure)
+
+1. In your browser open: <https://hub.docker.com/settings/security>
+2. Create a new Access Token (give it a name like `jarvix-ci`) and copy the token value.
+3. On Windows, run (from repo root):
+
+```powershell
+.\scripts\set_dockerhub_token_from_clipboard.ps1
+```
+
+The script reads the token from the clipboard and sets the secret `DOCKERHUB_TOKEN` (and optionally `DOCKERHUB_USERNAME`) using `gh`; it does not print the token.
+
+1. On macOS/Linux, run:
+
+```bash
+./scripts/set_dockerhub_token_from_clipboard.sh
+```
+
+### Extract manually (if you prefer)
+
+- Linux / macOS:
+
+```bash
+jq -r '.auths["https://index.docker.io/v1/"].auth' ~/.docker/config.json | base64 --decode
+# output: username:token
+```
+
+- PowerShell (Windows):
+
+```powershell
+$cfg = Get-Content $env:USERPROFILE + '\.docker\config.json' -Raw | ConvertFrom-Json
+$auth = $cfg.auths.'https://index.docker.io/v1/'.auth
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($auth))
+# output: username:token
+```
+
+Then add secrets via GitHub UI (Settings → Secrets → Actions → New repository secret) or using `gh`:
+
+```bash
+gh secret set DOCKERHUB_USERNAME -b"yourusername" --repo OWNER/REPO
+gh secret set DOCKERHUB_TOKEN -b"yourtoken" --repo OWNER/REPO
+```
+
+**Security note:** Do not commit your tokens to the repo. Use GitHub Secrets and rotate the token after use.
