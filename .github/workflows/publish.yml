@@ -1,0 +1,82 @@
+name: Build and Publish Images
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    name: Build and push Docker images
+    runs-on: ubuntu-latest
+    env:
+      ENGINE_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/jarvix-engine
+      APP_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/jarvix-app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub (if secrets set)
+        uses: docker/login-action@v2
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' }}
+
+      - name: Build & push engine image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker/engine
+          file: ./docker/engine/Dockerfile
+          push: ${{ secrets.DOCKERHUB_USERNAME != '' }}
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/jarvix-engine:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/jarvix-engine:${{ github.sha }}
+
+      - name: Build & push app image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker/app
+          file: ./docker/app/Dockerfile
+          push: ${{ secrets.DOCKERHUB_USERNAME != '' }}
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/jarvix-app:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/jarvix-app:${{ github.sha }}
+
+      - name: Save images as artifacts when not pushing
+        if: ${{ secrets.DOCKERHUB_USERNAME == '' }}
+        run: |
+          docker build -f docker/engine/Dockerfile -t jarvix-engine:ci-${{ github.sha }} docker/engine
+          docker save jarvix-engine:ci-${{ github.sha }} | gzip > jarvix-engine-${{ github.sha }}.tar.gz
+          docker build -f docker/app/Dockerfile -t jarvix-app:ci-${{ github.sha }} docker/app
+          docker save jarvix-app:ci-${{ github.sha }} | gzip > jarvix-app-${{ github.sha }}.tar.gz
+
+      - name: Upload images artifact
+        if: ${{ secrets.DOCKERHUB_USERNAME == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvix-images
+          path: |
+            jarvix-engine-${{ github.sha }}.tar.gz
+            jarvix-app-${{ github.sha }}.tar.gz
+
+  helm-deploy:
+    name: Helm deploy (optional)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: ${{ secrets.KUBE_CONFIG != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+      - name: Configure kubeconfig
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+      - name: Helm upgrade install
+        run: |
+          helm upgrade --install jarvix deploy/helm/jarvix --set image.repository=${{ secrets.DOCKERHUB_USERNAME }}/jarvix-engine --set image.tag=latest --namespace default --create-namespace
