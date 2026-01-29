@@ -83,6 +83,32 @@ The script reads the token from the clipboard and sets the secret `DOCKERHUB_TOK
 ./scripts/set_dockerhub_token_from_clipboard.sh
 ```
 
+### Automated creation via Playwright (advanced)
+
+If you want the creation to be automated (the script logs into Docker Hub, creates a token, and uploads it to GitHub Secrets), use the Playwright helper. This requires Node.js and Playwright installed and either:
+
+- a persistent browser profile that is already logged into Docker Hub (pass `--profile <dir>`), or
+- provide credentials via environment variables `DOCKERHUB_USER` and `DOCKERHUB_PASSWORD`.
+
+Run (from repo root):
+
+```bash
+# install Playwright browsers (first time)
+npm i -D playwright
+npx playwright install
+
+# example (interactive login, Windows PowerShell wrapper)
+.\scripts\create_dockerhub_token_playwright.ps1 -Repo "Rigohl/JARVIX-MULTISTACK"
+
+# or directly (env vars)
+DOCKERHUB_USER=you DOCKERHUB_PASSWORD=pass GITHUB_REPO=Rigohl/JARVIX-MULTISTACK node scripts/create_dockerhub_token_playwright.js --token-name "jarvix-ci-$(date +%F)"
+```
+
+Security notes:
+
+- The script detects 2FA and will abort; in that case create the token manually via the UI.
+- The script never prints the token; it sets it with `gh secret set` via stdin.
+
 ### Extract manually (if you prefer)
 
 - Linux / macOS:
