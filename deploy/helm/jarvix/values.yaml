@@ -1,0 +1,15 @@
+replicaCount: 1
+
+image:
+  repository: rigohl/jarvix-engine
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+env:
+  DB_URL: "postgres://user:pass@postgres:5432/jarvix"
+  SUPABASE_URL: ""
+  SUPABASE_KEY: ""

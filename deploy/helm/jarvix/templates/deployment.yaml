@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jarvix.fullname" . }}
+  labels:
+    app: {{ include "jarvix.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "jarvix.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "jarvix.name" . }}
+    spec:
+      containers:
+        - name: engine
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          env:
+            - name: DATABASE_URL
+              value: "{{ .Values.env.DB_URL }}"
+            - name: SUPABASE_URL
+              value: "{{ .Values.env.SUPABASE_URL }}"
+            - name: SUPABASE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jarvix.fullname" . }}-secret
+                  key: SUPABASE_KEY
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
